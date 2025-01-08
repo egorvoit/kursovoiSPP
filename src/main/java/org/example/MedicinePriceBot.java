@@ -5,6 +5,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -27,10 +29,6 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
             }
             // Обработка запроса категорий
             else if (messageText.equalsIgnoreCase("категории")) {
-                String categories = getCategories();
-                sendResponse(chatId, categories);
-            }
-            else if (messageText.equalsIgnoreCase("/list")) {
                 String categories = getCategories();
                 sendResponse(chatId, categories);
             }
@@ -149,6 +147,26 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "7975615650:AAH6RRoX_fvCPPCjr3Gk8Qhvby9OAKg0sh8";
+        try {
+            String encryptedToken = readTokenFromFile("token.txt"); // Чтение токена из файла
+            String key = "1234567890123456"; // Ключ для шифрования/дешифрования
+            return CryptoUtils.decrypt(encryptedToken, key);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null; // Или выбросьте исключение
+    }
+
+    private String readTokenFromFile(String filePath) {
+        StringBuilder token = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                token.append(line);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return token.toString();
     }
 }
