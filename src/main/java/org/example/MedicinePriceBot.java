@@ -1,5 +1,3 @@
-
-
 package org.example;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -11,6 +9,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MedicinePriceBot extends TelegramLongPollingBot {
 
@@ -22,32 +22,108 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
 
             // Обработка команды /start
             if (messageText.equalsIgnoreCase("/start")) {
-                String welcomeMessage = "Добро пожаловать в PharmaPriceBot! Как я могу помочь вам?";
+                String welcomeMessage = "Добро пожаловать в PharmaPriceBot! Напишите 'Категории', чтобы увидеть доступные категории или напишите название лекарства, чтобы узнать его цену.";
                 sendResponse(chatId, welcomeMessage);
             }
-            // Обработка приветствия
-            else if (messageText.equalsIgnoreCase("привет")) {
-                String responseMessage = "Я бот в разработке. Скоро я смогу помочь вам с ценами на лекарства!";
-                sendResponse(chatId, responseMessage);
+            // Обработка запроса категорий
+            else if (messageText.equalsIgnoreCase("категории")) {
+                String categories = getCategories();
+                sendResponse(chatId, categories);
             }
-            // Обработка других сообщений
+            else if (messageText.equalsIgnoreCase("/list")) {
+                String categories = getCategories();
+                sendResponse(chatId, categories);
+            }
+            // Обработка ввода категории
+            else if (isCategoryInput(messageText)) {
+                String medicinesInfo = getMedicinesByCategory(messageText);
+                sendResponse(chatId, medicinesInfo + "\nТеперь вы можете ввести название лекарства, чтобы узнать его цену или введите название категории, чтобы узнать лекарства в этой категории.");
+            }
+            // Обработка запроса цены на лекарство
             else {
                 String priceInfo = getMedicinePrice(messageText);
-                sendResponse(chatId, priceInfo);
+                sendResponse(chatId, priceInfo + "\nВы можете ввести другое название лекарства или введите название категории, чтобы узнать лекарства в этой категории.");
             }
         }
     }
 
+    private boolean isCategoryInput(String input) {
+        List<String> categories = getCategoriesList();
+        return categories.contains(input);
+    }
+
+    private List<String> getCategoriesList() {
+        List<String> categories = new ArrayList<>();
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/yourdb", "root", "1256")) {
+            String query = "SELECT DISTINCT category FROM medicines";
+            PreparedStatement statement = connection.prepareStatement(query);
+            ResultSet resultSet = statement.executeQuery();
+
+            while (resultSet.next()) {
+                categories.add(resultSet.getString("category"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return categories;
+    }
+
+    private String getCategories() {
+        StringBuilder categories = new StringBuilder("Доступные категории:\n");
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/yourdb", "root", "1256")) {
+            String query = "SELECT DISTINCT category FROM medicines";
+            PreparedStatement statement = connection.prepareStatement(query);
+            ResultSet resultSet = statement.executeQuery();
+
+            while (resultSet.next()) {
+                categories.append(resultSet.getString("category")).append("\n");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Ошибка получения категорий.";
+        }
+        return categories.toString();
+    }
+
+    private String getMedicinesByCategory(String category) {
+        StringBuilder medicinesInfo = new StringBuilder("Лекарства в категории \"" + category + "\":\n");
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/yourdb", "root", "1256")) {
+            String query = "SELECT name FROM medicines WHERE category = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, category);
+            ResultSet resultSet = statement.executeQuery();
+
+            boolean hasMedicines = false;
+            while (resultSet.next()) {
+                medicinesInfo.append(resultSet.getString("name")).append("\n");
+                hasMedicines = true;
+            }
+            if (!hasMedicines) {
+                medicinesInfo.append("Нет лекарств в этой категории.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Ошибка получения лекарств.";
+        }
+        return medicinesInfo.toString();
+    }
+
     private String getMedicinePrice(String medicineName) {
         String priceInfo = "Цена не найдена.";
-        try (Connection connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/yourdb", "user", "password")) {
-            String query = "SELECT price FROM medicines WHERE name = ?";
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/yourdb", "root", "1256")) {
+            String query = "SELECT price, category FROM medicines WHERE name = ?";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setString(1, medicineName);
+
+            // Логирование названия лекарства
+            System.out.println("Запрос цены для: " + medicineName);
+
             ResultSet resultSet = statement.executeQuery();
 
             if (resultSet.next()) {
-                priceInfo = "Цена на " + medicineName + ": " + resultSet.getString("price");
+                String price = resultSet.getString("price");
+                String category = resultSet.getString("category");
+                priceInfo = "Цена на " + medicineName + ": " + price + "\nКатегория: " + category;
             }
         } catch (Exception e) {
             e.printStackTrace();

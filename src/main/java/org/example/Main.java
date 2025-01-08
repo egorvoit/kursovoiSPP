@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 
 public class Main {
     public static void main(String[] args) {
+        
         try {
             // Создаем экземпляр API
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
