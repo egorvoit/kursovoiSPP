@@ -33,6 +33,6 @@ build/
 
 ### VS Code ###
 .vscode/
-
+token.txt
 ### Mac OS ###
 .DS_Store

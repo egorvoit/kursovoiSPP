@@ -2,6 +2,8 @@ package org.example;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -12,15 +14,26 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MedicinePriceBot extends TelegramLongPollingBot {
+
+    private Map<String, List<Integer>> userMessageIds = new HashMap<>();
 
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             String chatId = update.getMessage().getChatId().toString();
+
+            // Обработка команды clear
+            if (messageText.equalsIgnoreCase("/clear")) {
+                clearUserMessages(chatId);
+                sendResponse(chatId, "Сообщения очищены.");
+                return; // Возврат, чтобы не обрабатывать другие команды
+            }
 
             // Обработка команды /start
             if (messageText.equalsIgnoreCase("/start")) {
@@ -29,6 +42,10 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
             }
             // Обработка запроса категорий
             else if (messageText.equalsIgnoreCase("категории")) {
+                String categories = getCategories();
+                sendResponse(chatId, categories);
+            }
+            else if (messageText.equalsIgnoreCase("/list")) {
                 String categories = getCategories();
                 sendResponse(chatId, categories);
             }
@@ -42,6 +59,32 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
                 String priceInfo = getMedicinePrice(messageText);
                 sendResponse(chatId, priceInfo + "\nВы можете ввести другое название лекарства или введите название категории, чтобы узнать лекарства в этой категории.");
             }
+        }
+    }
+
+    private void clearUserMessages(String chatId) {
+        List<Integer> messageIds = userMessageIds.getOrDefault(chatId, new ArrayList<>());
+        for (Integer messageId : messageIds) {
+            try {
+                DeleteMessage deleteMessage = new DeleteMessage(chatId, messageId);
+                execute(deleteMessage);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        }
+        userMessageIds.remove(chatId); // Удаление сообщений из памяти после очистки
+    }
+
+    private void sendResponse(String chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(text);
+        try {
+            // Отправка сообщения и сохранение его ID
+            Message sentMessage = execute(message);
+            userMessageIds.computeIfAbsent(chatId, k -> new ArrayList<>()).add(sentMessage.getMessageId());
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 
@@ -129,17 +172,6 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
         return priceInfo;
     }
 
-    private void sendResponse(String chatId, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText(text);
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
-
     @Override
     public String getBotUsername() {
         return "PharmaPricePO8Bot";
@@ -147,14 +179,7 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        try {
-            String encryptedToken = readTokenFromFile("token.txt"); // Чтение токена из файла
-            String key = "1234567890123456"; // Ключ для шифрования/дешифрования
-            return CryptoUtils.decrypt(encryptedToken, key);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null; // Или выбросьте исключение
+        return readTokenFromFile("D:/labs/СПП/kursovoi/token.txt"); // Чтение токена из файла
     }
 
     private String readTokenFromFile(String filePath) {
@@ -162,7 +187,7 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                token.append(line);
+                token.append(line.trim()); // Удаление лишних пробелов
             }
         } catch (Exception e) {
             e.printStackTrace();

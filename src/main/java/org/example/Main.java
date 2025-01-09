@@ -16,9 +16,9 @@ public class Main {
     public static void main(String[] args) {
         
         try {
-            // Создаем экземпляр API
+
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            // Регистрируем бота
+
             botsApi.registerBot(new MedicinePriceBot());
         } catch (TelegramApiException e) {
             e.printStackTrace();
