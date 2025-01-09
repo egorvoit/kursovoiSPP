@@ -28,19 +28,19 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
             String messageText = update.getMessage().getText();
             String chatId = update.getMessage().getChatId().toString();
 
-            // Обработка команды clear
+
             if (messageText.equalsIgnoreCase("/clear")) {
                 clearUserMessages(chatId);
                 sendResponse(chatId, "Сообщения очищены.");
-                return; // Возврат, чтобы не обрабатывать другие команды
+                return;
             }
 
-            // Обработка команды /start
+
             if (messageText.equalsIgnoreCase("/start")) {
                 String welcomeMessage = "Добро пожаловать в PharmaPriceBot! Напишите 'Категории', чтобы увидеть доступные категории или напишите название лекарства, чтобы узнать его цену.";
                 sendResponse(chatId, welcomeMessage);
             }
-            // Обработка запроса категорий
+
             else if (messageText.equalsIgnoreCase("категории")) {
                 String categories = getCategories();
                 sendResponse(chatId, categories);
@@ -49,12 +49,12 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
                 String categories = getCategories();
                 sendResponse(chatId, categories);
             }
-            // Обработка ввода категории
+
             else if (isCategoryInput(messageText)) {
                 String medicinesInfo = getMedicinesByCategory(messageText);
                 sendResponse(chatId, medicinesInfo + "\nТеперь вы можете ввести название лекарства, чтобы узнать его цену или введите название категории, чтобы узнать лекарства в этой категории.");
             }
-            // Обработка запроса цены на лекарство
+
             else {
                 String priceInfo = getMedicinePrice(messageText);
                 sendResponse(chatId, priceInfo + "\nВы можете ввести другое название лекарства или введите название категории, чтобы узнать лекарства в этой категории.");
@@ -72,7 +72,7 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
         }
-        userMessageIds.remove(chatId); // Удаление сообщений из памяти после очистки
+        userMessageIds.remove(chatId);
     }
 
     private void sendResponse(String chatId, String text) {
@@ -80,7 +80,7 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
         message.setChatId(chatId);
         message.setText(text);
         try {
-            // Отправка сообщения и сохранение его ID
+
             Message sentMessage = execute(message);
             userMessageIds.computeIfAbsent(chatId, k -> new ArrayList<>()).add(sentMessage.getMessageId());
         } catch (TelegramApiException e) {
@@ -156,7 +156,7 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setString(1, medicineName);
 
-            // Логирование названия лекарства
+
             System.out.println("Запрос цены для: " + medicineName);
 
             ResultSet resultSet = statement.executeQuery();
@@ -179,7 +179,7 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return readTokenFromFile("D:/labs/СПП/kursovoi/token.txt"); // Чтение токена из файла
+        return readTokenFromFile("D:/labs/СПП/kursovoi/token.txt");
     }
 
     private String readTokenFromFile(String filePath) {
@@ -187,7 +187,7 @@ public class MedicinePriceBot extends TelegramLongPollingBot {
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                token.append(line.trim()); // Удаление лишних пробелов
+                token.append(line.trim());
             }
         } catch (Exception e) {
             e.printStackTrace();
